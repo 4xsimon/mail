@@ -1,55 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lobobo Mail</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; background: #121212; color: white; }
-        .box { border: 2px solid #333; padding: 20px; display: inline-block; border-radius: 10px; background: #1e1e1e; }
-        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; margin: 10px; }
-        #email { font-size: 20px; color: #00ffcc; font-weight: bold; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
+        .container { background: #1e1e1e; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 10px 30px rgba(0,0,0,0.5); min-width: 300px; }
+        #email { font-size: 22px; color: #00ffcc; margin: 20px 0; padding: 10px; border: 1px dashed #444; }
+        button { background: #007bff; color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px; transition: 0.3s; }
+        button:hover { background: #0056b3; }
+        .msg { background: #252525; margin-top: 10px; padding: 15px; border-radius: 8px; text-align: left; border-left: 4px solid #007bff; }
     </style>
 </head>
 <body>
-    <div class="box">
+    <div class="container">
         <h1>Lobobo Temp Mail</h1>
-        <div id="email">Kliknij generuj...</div>
-        <button onclick="generate()">Generuj Maila</button>
-        <button onclick="check()">Sprawdź Poczta</button>
-        <div id="status"></div>
-        <div id="messages" style="margin-top: 20px; text-align: left;"></div>
+        <div id="email">Brak adresu...</div>
+        <button onclick="generateEmail()">Generuj Nowy</button>
+        <button onclick="checkInbox()">Sprawdź Pocztę</button>
+        <div id="status" style="margin-top: 10px; color: #888;"></div>
+        <div id="inbox"></div>
     </div>
 
     <script>
-        // SPRAWDŹ CZY TEN ADRES JEST IDENTYCZNY JAK NA TWOIM ZDJĘCIU CLOUDFLARE
-        const API_BASE = "https://mail.lobobo-360.workers.dev";
-        let myEmail = "";
+        const API_URL = "https://mail.lobobo-360.workers.dev";
+        let currentEmail = "";
 
-        async function generate() {
+        async function generateEmail() {
             try {
-                const r = await fetch(`${API_BASE}/api/gen`);
-                const d = await r.json();
-                myEmail = d.email;
-                document.getElementById('email').innerText = myEmail;
+                const res = await fetch(`${API_URL}/api/gen`);
+                const data = await res.json();
+                currentEmail = data.email;
+                document.getElementById('email').innerText = currentEmail;
+                document.getElementById('inbox').innerHTML = "";
             } catch (e) {
-                console.error("Błąd generowania:", e);
-                alert("API nie odpowiada (CORS lub błąd adresu)");
+                alert("Błąd połączenia z API!");
             }
         }
 
-        async function check() {
-            if(!myEmail) return alert("Najpierw wygeneruj maila!");
+        async function checkInbox() {
+            if (!currentEmail) return alert("Najpierw wygeneruj maila!");
+            document.getElementById('status').innerText = "Sprawdzanie...";
+            
             try {
-                const r = await fetch(`${API_BASE}/api/get?email=${myEmail}`);
-                const d = await r.json();
-                const msgDiv = document.getElementById('messages');
-                msgDiv.innerHTML = d.length ? "" : "Brak wiadomości...";
-                d.forEach(m => {
-                    msgDiv.innerHTML += `<div style="border-bottom:1px solid #444; padding:10px;">
-                        <b>Od:</b> ${m.from}<br><b>Temat:</b> ${m.subject}</div>`;
-                });
+                const res = await fetch(`${API_URL}/api/get?email=${currentEmail}`);
+                const data = await res.json();
+                
+                const inboxDiv = document.getElementById('inbox');
+                document.getElementById('status').innerText = "";
+
+                if (Array.isArray(data) && data.length > 0) {
+                    inboxDiv.innerHTML = "";
+                    data.forEach(m => {
+                        inboxDiv.innerHTML += `
+                            <div class="msg">
+                                <b>Od:</b> ${m.from}<br>
+                                <b>Temat:</b> ${m.subject}
+                            </div>`;
+                    });
+                } else {
+                    inboxDiv.innerHTML = "<p>Skrzynka jest pusta.</p>";
+                }
             } catch (e) {
                 console.error("Błąd pobierania:", e);
+                document.getElementById('status').innerText = "Błąd pobierania danych.";
             }
         }
     </script>
